@@ -1,1 +1,7 @@
-python-3.9.0
+certifi==2024.2.2
+charset-normalizer==3.3.2
+idna==3.7
+load-dotenv==0.1.0
+python-dotenv==1.0.1
+requests==2.31.0
+urllib3==2.2.1
