@@ -2,6 +2,7 @@ import requests
 import os
 from dotenv import load_dotenv
 import psycopg2
+import json
 
 # Load environment variables
 load_dotenv()
@@ -50,16 +51,15 @@ try:
     # Insert data into the database
     if api_data:
         for item in api_data:
-            # Extract relevant data
-            endpoint = item.get('endpoint')
-            request_body = item.get('request_body')
-            response_body = item.get('response_body')
+            # Convert the entire item to JSON and store it in the data column
+            # Ensure your item is a dictionary that can be converted into JSON
+            item_json = json.dumps(item)
             
             # Execute the INSERT statement
             cur.execute("""
-                INSERT INTO odds_data (endpoint, request_body, response_body) 
-                VALUES (%s, %s, %s)
-            """, (endpoint, request_body, response_body))
+                INSERT INTO odds_data (data) 
+                VALUES (%s::jsonb)
+            """, (item_json,))
 
         # Commit the transaction
         conn.commit()
@@ -74,4 +74,3 @@ finally:
         cur.close()
     if conn:
         conn.close()
-
