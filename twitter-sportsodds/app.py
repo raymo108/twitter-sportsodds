@@ -1,6 +1,7 @@
 import requests
 import os
 from dotenv import load_dotenv
+import psycopg2
 
 # Load environment variables
 load_dotenv()
@@ -26,11 +27,51 @@ def get_api_data(url):
         print(f"An error occurred: {err}")
 
 # Construct the API URL with appropriate parameters
-url = f"https://api.the-odds-api.com/v4/sports/baseball_mlb/odds/?apiKey={api_key}&regions=us&markets=h2h,spreads&oddsFormat=american&bookmakers=draftkings,fanduel,barstool,betmgm,williamhill_us,espnbet"
+url = f"https://api.the-odds-api.com/v4/sports/baseball_mlb/odds/?apiKey={api_key}&regions=us&markets=h2h,spreads&oddsFormat=american&bookmakers=draftkings,>"
 
 # Fetch API data
 api_data = get_api_data(url)
-if api_data:
-    print(api_data)
-else:
-    print("Failed to retrieve data.")
+
+# Database connection parameters
+conn_params = {
+    'dbname': os.getenv('DB_NAME'),
+    'user': os.getenv('DB_USER'),
+    'password': os.getenv('DB_PASSWORD'),
+    'host': os.getenv('DB_HOST'),
+    'port': int(os.getenv('DB_PORT', 25060)),
+    'sslmode': 'require'
+}
+
+try:
+    # Connect to the PostgreSQL server
+    conn = psycopg2.connect(**conn_params)
+    cur = conn.cursor()
+
+    # Insert data into the database
+    if api_data:
+        for item in api_data:
+            # Extract relevant data
+            endpoint = item.get('endpoint')
+            request_body = item.get('request_body')
+            response_body = item.get('response_body')
+            
+            # Execute the INSERT statement
+            cur.execute("""
+                INSERT INTO odds_data (endpoint, request_body, response_body) 
+                VALUES (%s, %s, %s)
+            """, (endpoint, request_body, response_body))
+
+        # Commit the transaction
+        conn.commit()
+        print("Data inserted successfully.")
+    else:
+        print("No data retrieved from the API.")
+except (Exception, psycopg2.DatabaseError) as error:
+    print(f"Failed to insert data: {error}")
+finally:
+    # Close the cursor and connection
+    if cur:
+        cur.close()
+    if conn:
+        conn.close()
+
